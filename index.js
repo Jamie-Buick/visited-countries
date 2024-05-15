@@ -3,8 +3,10 @@ import bodyParser from "body-parser";
 import pg from "pg";
 
 
+
 const app = express();
 const port = 3000;
+
 
 const db = new pg.Client({
   user : "postgres",
@@ -26,9 +28,39 @@ app.get("/", async (req, res) => {
   result.rows.forEach((country) => {
     countries.push(country.country_code);
   });
-  console.log(result.rows);
+  //console.log(result.rows);
   res.render("index.ejs", { countries: countries, total: countries.length });
-  db.end();
+  //db.end();
+});
+
+app.post("/add", async (req, res) => {
+
+  const country = req.body["country"];
+  console.log(country);
+
+  const result = await db.query("SELECT country_code FROM countries WHERE country_name ILIKE  $1", [`%${country}%`]);
+  const data = result.rows[0];
+  const countryCode = data.country_code;
+  console.log(countryCode);
+
+  try 
+  {
+    await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", [countryCode]);
+    res.redirect("/");
+  }
+  catch(error)
+  {
+    if(error.code === '23505')
+    {
+      console.error('Duplicate Entry', error.details);
+
+    }
+    else
+    {
+      console.error('Error:', error.message);
+    }
+  }
+
 });
 
 
